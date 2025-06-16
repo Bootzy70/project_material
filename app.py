@@ -312,6 +312,10 @@ def delete_user(username):
     flash(f"ลบผู้ใช้ {username} เรียบร้อยแล้ว")
     save_users()
     return redirect(url_for("admin_page"))
+@app.before_first_request
+def init_data():
+    load_data()
+
 
 # ---------------------- Main ----------------------
 
