@@ -18,8 +18,10 @@ app.secret_key = 'your_secret_key_here'
 users = {}
 materials = []
 stock_logs = []
+data_loaded = False  # Flag
 
 # ---------------------- Load / Save ----------------------
+
 def load_data():
     global users, materials, stock_logs
     users.clear()
@@ -45,12 +47,15 @@ def load_data():
         stock_logs.extend(log_data)
 
     except Exception as e:
-        print("\u274c Error loading data from Supabase:", e)
+        print("❌ Error loading data from Supabase:", e)
 
-@app.before_first_request
-def init_data():
-    print("\ud83d\udd04 Loading data from Supabase before first request...")
-    load_data()
+@app.before_request
+def ensure_data_loaded():
+    global data_loaded
+    if not data_loaded:
+        print("🔄 Loading data from Supabase before first real request...")
+        load_data()
+        data_loaded = True
 
 
 def save_users():
