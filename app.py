@@ -15,38 +15,63 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 
 # ---------------------- Global Data ----------------------
-
 users = {}
 materials = []
 stock_logs = []
 
 # ---------------------- Load / Save ----------------------
-
 def load_data():
     global users, materials, stock_logs
     users.clear()
     materials.clear()
     stock_logs.clear()
 
-    user_data = supabase.table("users").select("*").execute().data
-    for u in user_data:
-        users[u["username"]] = {"password": u["password"], "is_admin": u["is_admin"]}
+    try:
+        user_data = supabase.table("users").select("*").execute().data
+        material_data = supabase.table("materials").select("*").execute().data
+        log_data = supabase.table("stock_logs").select("*").execute().data
 
-    materials.extend(supabase.table("materials").select("*").execute().data)
-    stock_logs.extend(supabase.table("stock_logs").select("*").execute().data)
+        print("Users Loaded:", user_data)
+        print("Materials Loaded:", material_data)
+        print("Stock Logs Loaded:", log_data)
+
+        for u in user_data:
+            users[u["username"]] = {
+                "password": u["password"],
+                "is_admin": u["is_admin"]
+            }
+
+        materials.extend(material_data)
+        stock_logs.extend(log_data)
+
+    except Exception as e:
+        print("\u274c Error loading data from Supabase:", e)
+
+@app.before_first_request
+def init_data():
+    print("\ud83d\udd04 Loading data from Supabase before first request...")
+    load_data()
+
 
 def save_users():
     supabase.table("users").delete().neq("username", "").execute()
     for u, d in users.items():
-        supabase.table("users").insert({"username": u, "password": d["password"], "is_admin": d["is_admin"]}).execute()
+        supabase.table("users").insert({
+            "username": u,
+            "password": d["password"],
+            "is_admin": d["is_admin"]
+        }).execute()
+
 
 def save_materials():
     supabase.table("materials").delete().neq("code", "").execute()
     supabase.table("materials").insert(materials).execute()
 
+
 def save_stock_logs():
     supabase.table("stock_logs").delete().neq("code", "").execute()
     supabase.table("stock_logs").insert(stock_logs).execute()
+
 
 def save_data():
     save_users()
@@ -54,7 +79,6 @@ def save_data():
     save_stock_logs()
 
 # ---------------------- Helpers ----------------------
-
 def generate_material_code():
     existing_codes = [m.get("code") for m in materials if m.get("code")]
     index = 1
@@ -64,6 +88,7 @@ def generate_material_code():
             return code
         index += 1
 
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -71,6 +96,7 @@ def login_required(f):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated
+
 
 def admin_required(f):
     @wraps(f)
@@ -82,7 +108,6 @@ def admin_required(f):
     return decorated
 
 # ---------------------- Routes ----------------------
-
 @app.route("/")
 def index():
     return redirect(url_for("login"))
@@ -312,13 +337,7 @@ def delete_user(username):
     flash(f"ลบผู้ใช้ {username} เรียบร้อยแล้ว")
     save_users()
     return redirect(url_for("admin_page"))
-@app.before_first_request
-def init_data():
-    load_data()
-
 
 # ---------------------- Main ----------------------
-
 if __name__ == "__main__":
-    load_data()
     app.run(host="0.0.0.0", port=5000, debug=True)
