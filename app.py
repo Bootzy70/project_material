@@ -33,10 +33,6 @@ def load_data():
         material_data = supabase.table("materials").select("*").execute().data
         log_data = supabase.table("stock_logs").select("*").execute().data
 
-        print("Users Loaded:", user_data)
-        print("Materials Loaded:", material_data)
-        print("Stock Logs Loaded:", log_data)
-
         for u in user_data:
             users[u["username"]] = {
                 "password": u["password"],
